@@ -1,11 +1,12 @@
 import './_globalHooks';
 
+import assert from 'assert';
+import fs from 'fs';
+
+import EventStore from '../lib';
 import generateEventId from '../lib/utilities/generateEventId';
 import httpConfig from './support/httpConfig';
 import sleep from './utilities/sleep';
-import EventStore from '../lib';
-import assert from 'assert';
-import fs from 'fs';
 
 describe('Projections', () => {
 	describe('Default Settings', () => {
@@ -20,6 +21,10 @@ describe('Projections', () => {
 
 			const response = await client.projections.assert(assertionProjection, assertionProjectionContent);
 			assert.equal(response.name, assertionProjection);
+
+			const responseWithTrackEmittedStreamsEnabled = await client.projections.getInfo(assertionProjection, true);
+			assert.equal(responseWithTrackEmittedStreamsEnabled.config.emitEnabled, false);
+			assert.equal(responseWithTrackEmittedStreamsEnabled.config.trackEmittedStreams, false);
 		});
 
 		it('Should update existing projection', async function () {
@@ -88,6 +93,19 @@ describe('Projections', () => {
 			assert.equal(response.name, assertionProjection);
 			const responseWithTrackEmittedStreamsEnabled = await client.projections.getInfo(assertionProjection, true);
 			assert.equal(responseWithTrackEmittedStreamsEnabled.config.trackEmittedStreams, true);
+			assert.equal(responseWithTrackEmittedStreamsEnabled.config.emitEnabled, true);
+		});
+
+		it('Should update projection with track emitted streams enabled', async function () {
+			this.timeout(10 * 1000);
+			const client = new EventStore.HTTPClient(httpConfig);
+
+			await client.projections.assert(assertionProjection, assertionProjectionContent, 'onetime', true, true, true);
+			const responseWithTrackEmittedStreamsDisabled = await client.projections.getInfo(assertionProjection, true);
+			assert.equal(responseWithTrackEmittedStreamsDisabled.config.trackEmittedStreams, false);
+
+			await client.projections.assert(assertionProjection, assertionProjectionContent, 'onetime', true, true, true, true);
+			const responseWithTrackEmittedStreamsEnabled = await client.projections.getInfo(assertionProjection, true);
 			assert.equal(responseWithTrackEmittedStreamsEnabled.config.emitEnabled, true);
 		});
 
